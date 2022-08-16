@@ -19,6 +19,13 @@ To integrate apigw with targets, we need:
 - Request mapping: proxy, request parameters, request templates
 - Response mapping: method response, integration response, reponse template
 
+<LinkedImage
+  href="https://youtu.be/9PwT8OkFBA4"
+  height={400}
+  alt="Hello AWS CDK Construct"
+  src="/thumbnail/apigw-integration.png"
+/>
+
 ## Lambda Backend
 
 create a lambda for backend
