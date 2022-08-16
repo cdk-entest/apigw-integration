@@ -259,3 +259,11 @@ resource.addMethod(
   }
 );
 ```
+
+## Conclusion
+
+1. Role for apigw
+2. Multiple stage deployment
+3. Access log group
+4. Response mapping
+5. Request mapping
