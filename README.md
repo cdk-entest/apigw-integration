@@ -240,7 +240,10 @@ resource.addMethod(
         "integration.request.header.Content-Type": `'application/x-www-form-urlencoded'`,
       },
       requestTemplates: {
-        "application/json": `Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")`,
+        "application/json": fs.readFileSync(
+          path.resolve(__dirname, "./../lambda/request-template"),
+          { encoding: "utf-8" }
+        ),
       },
       integrationResponses: [
         {
@@ -265,5 +268,5 @@ resource.addMethod(
 1. Role for apigw
 2. Multiple stage deployment
 3. Access log group
-4. Response mapping
-5. Request mapping
+4. Response mapping - integration response setting (aws console)
+5. Request mapping - integration request setting (aws console)

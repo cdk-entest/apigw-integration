@@ -96,7 +96,7 @@ export class ApigwLambdaStack extends Stack {
             statusCode: "200",
             responseTemplates: {
               "application/json": fs.readFileSync(
-                path.resolve(__dirname, "./../lambda/schema"),
+                path.resolve(__dirname, "./../lambda/response-template"),
                 { encoding: "utf-8" }
               ),
             },
@@ -174,7 +174,10 @@ export class ApigwSqsStack extends Stack {
             "integration.request.header.Content-Type": `'application/x-www-form-urlencoded'`,
           },
           requestTemplates: {
-            "application/json": `Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")`,
+            "application/json": fs.readFileSync(
+              path.resolve(__dirname, "./../lambda/request-template"),
+              { encoding: "utf-8" }
+            ),
           },
           integrationResponses: [
             {
