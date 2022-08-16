@@ -65,8 +65,8 @@ export class ApigwLambdaStack extends Stack {
     });
 
     // api gateway
-    this.apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
-      restApiName: "ApiGwIntegration",
+    this.apigw = new aws_apigateway.RestApi(this, "ApiGwLambdaIntegration", {
+      restApiName: "ApiGwLambdaIntegration",
       deployOptions: {
         stageName: "dev",
         accessLogDestination: new aws_apigateway.LogGroupLogDestination(
@@ -127,8 +127,8 @@ export class ApigwSqsStack extends Stack {
     });
 
     // api gateway
-    const apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
-      restApiName: "ApiGwIntegration",
+    const apigw = new aws_apigateway.RestApi(this, "ApiGwSqsIntegration", {
+      restApiName: "ApiGwSqsIntegration",
       deployOptions: {
         stageName: "dev",
         accessLogDestination: new aws_apigateway.LogGroupLogDestination(
@@ -225,8 +225,8 @@ export class ApigwEventStack extends Stack {
     });
 
     // api gateway
-    const apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
-      restApiName: "ApiGwIntegration",
+    const apigw = new aws_apigateway.RestApi(this, "ApiGwEventIntegration", {
+      restApiName: "ApiGwEventIntegration",
       deployOptions: {
         stageName: "dev",
         accessLogDestination: new aws_apigateway.LogGroupLogDestination(
