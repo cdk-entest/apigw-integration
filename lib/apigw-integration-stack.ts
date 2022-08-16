@@ -216,7 +216,7 @@ export class ApigwEventStack extends Stack {
       },
     });
 
-    // role for apigw
+    // role for apigw to put events
     const role = new aws_iam.Role(this, "ApiGwPutEvent", {
       roleName: "ApiGwPutEvent",
       assumedBy: new aws_iam.ServicePrincipal("apigateway.amazonaws.com"),
