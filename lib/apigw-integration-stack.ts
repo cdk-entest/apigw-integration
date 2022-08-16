@@ -116,13 +116,28 @@ export class ApigwLambdaStack extends Stack {
   }
 }
 
-interface ApiSqsProps extends StackProps {
-  apigw: aws_apigateway.RestApi;
-}
-
 export class ApigwSqsStack extends Stack {
-  constructor(scope: Construct, id: string, props: ApiSqsProps) {
+  constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
+
+    // log group
+    const devLogGroup = new aws_logs.LogGroup(this, "DevLogGroup", {
+      logGroupName: "DevLogGroup",
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    // api gateway
+    const apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
+      restApiName: "ApiGwIntegration",
+      deployOptions: {
+        stageName: "dev",
+        accessLogDestination: new aws_apigateway.LogGroupLogDestination(
+          devLogGroup
+        ),
+        accessLogFormat:
+          aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
+      },
+    });
 
     // sqs queue
     const queue = new aws_sqs.Queue(this, "ApiSqsQueue", {
@@ -160,7 +175,7 @@ export class ApigwSqsStack extends Stack {
     );
 
     // apigw add resource
-    const resource = props.apigw.root.addResource("queue");
+    const resource = apigw.root.addResource("queue");
 
     // integrate apigw with sqs
     resource.addMethod(
@@ -199,13 +214,28 @@ export class ApigwSqsStack extends Stack {
   }
 }
 
-interface ApiEventProps extends StackProps {
-  apigw: aws_apigateway.RestApi;
-}
-
 export class ApigwEventStack extends Stack {
-  constructor(scope: Construct, id: string, props: ApiEventProps) {
+  constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
+
+    // log group
+    const devLogGroup = new aws_logs.LogGroup(this, "DevLogGroup", {
+      logGroupName: "DevLogGroup",
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    // api gateway
+    const apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
+      restApiName: "ApiGwIntegration",
+      deployOptions: {
+        stageName: "dev",
+        accessLogDestination: new aws_apigateway.LogGroupLogDestination(
+          devLogGroup
+        ),
+        accessLogFormat:
+          aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
+      },
+    });
 
     // eventbridge rule
     const rule = new aws_events.Rule(this, "RuleForEventFromApiGw", {
@@ -247,14 +277,14 @@ export class ApigwEventStack extends Stack {
     );
 
     // apigw add resource
-    const resource = props.apigw.root.addResource("event");
+    const resource = apigw.root.addResource("event");
 
     // integrate apigw with sqs
     resource.addMethod(
       "POST",
       new aws_apigateway.AwsIntegration({
         service: "events",
-        path: "event",
+        action: "PutEvents",
         options: {
           credentialsRole: role,
           passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,

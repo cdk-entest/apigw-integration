@@ -1,8 +1,14 @@
-"#set($context.requestOverride.header.X-Amz-Target = \"\
-AWSEvents.PutEvents\")\n#set($context.requestOverride.header.Content-Type\
-\ = \"application/x-amz-json-1.1\")            \n#set($inputRoot = $input.path('$'))\
-\ \n{ \n\"Entries\": [\n  #foreach($elem in $inputRoot.entries)\n  {\n\
-\    \"Resources\": [\"$context.authorizer.clientId\"],\n    \"Detail\"\
-: \"$util.escapeJavaScript($elem.entry)\",\n    \"DetailType\": \"$stageVariables.Environment\"\
-,\n    \"EventBusName\": \"$stageVariables.Bus\",\n    \"Source\":\"clientevents\"\
-\n  }#if($foreach.hasNext),#end\n  #end\n]\n}"
+#set($context.requestOverride.header.X-Amz-Target = "AWSEvents.PutEvents")
+#set($context.requestOverride.header.Content-Type = "application/x-amz-json-1.1")
+#set($inputRoot = $input.path('$'))
+{
+  "Entries": [
+    {
+      "Resources": ["1234"],
+      "Detail": "{ \"key1\": \"value1\", \"key2\": \"value2\" }",
+      "DetailType": "dev",
+      "EventBusName": "default",
+      "Source": "apigateway"
+    }
+  ]
+}
