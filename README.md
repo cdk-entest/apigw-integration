@@ -32,6 +32,28 @@ const func = new aws_lambda.Function(this, "ProcessOrderLambda", {
 });
 ```
 
+lambda should return a corret header format to support proxy mode
+
+```py
+import uuid
+
+def handler(event, context):
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "OPTIONS,GET",
+        },
+        "body": {
+            "id": str(uuid.uuid4()),
+            "name": "haimtran",
+            "message": "hello lambda api",
+        },
+    }
+
+```
+
 ## Role for APIGW
 
 role for APIGW to invoke the lambda and put logs
@@ -72,24 +94,31 @@ role.addToPolicy(
 access log group for production stage
 
 ```tsx
-const prodLogGroup = new aws_logs.LogGroup(this, "ProdLogGroup", {
-  logGroupName: "ProdLogGroupAccessLog",
+const devLogGroup = new aws_logs.LogGroup(this, "DevLogGroup", {
+  logGroupName: "DevLogGroup",
+  removalPolicy: RemovalPolicy.DESTROY,
 });
 ```
 
 create an apigw and production stage deployment
 
 ```tsx
-const apiGw = new aws_apigateway.RestApi(this, "HelloApiGw", {
-  restApiName: "HelloApiGw",
+this.apigw = new aws_apigateway.RestApi(this, "ApiGwIntegration", {
+  restApiName: "ApiGwIntegration",
   deployOptions: {
-    stageName: "prod",
+    stageName: "dev",
     accessLogDestination: new aws_apigateway.LogGroupLogDestination(
-      prodLogGroup
+      devLogGroup
     ),
     accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
   },
 });
+```
+
+create api resource
+
+```tsx
+const book = this.apigw.root.addResource("lambda");
 ```
 
 ## Lambda Integration
@@ -97,23 +126,48 @@ const apiGw = new aws_apigateway.RestApi(this, "HelloApiGw", {
 integrate apigw with the lambda function
 
 ```tsx
-const book = apiGw.root.addResource("book");
 book.addMethod(
   "GET",
   new aws_apigateway.LambdaIntegration(func, {
     proxy: false,
     allowTestInvoke: false,
     credentialsRole: role,
+    // api-input-map
+    passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+    requestParameters: {},
+    requestTemplates: {},
+    // api-output-map
     integrationResponses: [
       {
         statusCode: "200",
+        responseTemplates: {
+          "application/json": fs.readFileSync(
+            path.resolve(__dirname, "./../lambda/schema"),
+            { encoding: "utf-8" }
+          ),
+        },
       },
     ],
   }),
   {
-    methodResponses: [{ statusCode: "200" }],
+    // no need for lambda-proxy true
+    methodResponses: [
+      {
+        statusCode: "200",
+      },
+    ],
   }
 );
+```
+
+then we want apigw to intercept the response from backend before return to client by using a model/schema as follow. This is called [models and mapping template](https://docs.aws.amazon.com/apigateway/latest/developerguide/models-mappings.html) for payload.
+
+```tsx
+#set($inputRoot = $input.path('$'))
+{
+    "id": "$inputRoot.body.id",
+    "message": "$inputRoot.body.message"
+}
 ```
 
 ## Development Stage
@@ -140,4 +194,68 @@ new aws_apigateway.Stage(this, "DevStage", {
   accessLogDestination: new aws_apigateway.LogGroupLogDestination(devLogGroup),
   accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
 });
+```
+
+## SQS Integration
+
+create a qeuue
+
+```tsx
+const queue = new aws_sqs.Queue(this, "ApiSqsQueue", {
+  queueName: "ApiSqsQueue",
+});
+```
+
+for for apigw to send messages to queue
+
+```tsx
+role.addToPolicy(
+  new aws_iam.PolicyStatement({
+    effect: Effect.ALLOW,
+    resources: [queue.queueArn],
+    actions: ["sqs:SendMessage"],
+  })
+);
+```
+
+create an api resource
+
+```tsx
+const resource = props.apigw.root.addResource("queue");
+```
+
+integrate apigw with the queue. apigw needs to transform the request to match the request format of sqs [here](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html) by using a request template (mapping), and add a header content-type parameter for POST method.
+
+```tsx
+// integrate apigw with sqs
+resource.addMethod(
+  "POST",
+  new aws_apigateway.AwsIntegration({
+    service: "sqs",
+    path: queue.queueName,
+    options: {
+      credentialsRole: role,
+      passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+      requestParameters: {
+        "integration.request.header.Content-Type": `'application/x-www-form-urlencoded'`,
+      },
+      requestTemplates: {
+        "application/json": `Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")`,
+      },
+      integrationResponses: [
+        {
+          statusCode: "200",
+        },
+      ],
+    },
+  }),
+  // method response
+  {
+    methodResponses: [
+      {
+        statusCode: "200",
+      },
+    ],
+  }
+);
 ```
