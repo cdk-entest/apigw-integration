@@ -1,5 +1,6 @@
 import {
   aws_apigateway,
+  aws_events,
   aws_iam,
   aws_lambda,
   aws_logs,
@@ -176,6 +177,91 @@ export class ApigwSqsStack extends Stack {
           requestTemplates: {
             "application/json": fs.readFileSync(
               path.resolve(__dirname, "./../lambda/request-template"),
+              { encoding: "utf-8" }
+            ),
+          },
+          integrationResponses: [
+            {
+              statusCode: "200",
+            },
+          ],
+        },
+      }),
+      // method response
+      {
+        methodResponses: [
+          {
+            statusCode: "200",
+          },
+        ],
+      }
+    );
+  }
+}
+
+interface ApiEventProps extends StackProps {
+  apigw: aws_apigateway.RestApi;
+}
+
+export class ApigwEventStack extends Stack {
+  constructor(scope: Construct, id: string, props: ApiEventProps) {
+    super(scope, id, props);
+
+    // eventbridge rule
+    const rule = new aws_events.Rule(this, "RuleForEventFromApiGw", {
+      ruleName: "RuleForEventFromApiGw",
+      eventPattern: {
+        source: ["apigateway"],
+        detailType: ["*"],
+      },
+    });
+
+    // role for apigw
+    const role = new aws_iam.Role(this, "ApiGwPutEvent", {
+      roleName: "ApiGwPutEvent",
+      assumedBy: new aws_iam.ServicePrincipal("apigateway.amazonaws.com"),
+    });
+
+    role.addToPolicy(
+      new aws_iam.PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ["*"],
+        actions: ["events:PutEvents"],
+      })
+    );
+
+    role.addToPolicy(
+      new aws_iam.PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ["*"],
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents",
+        ],
+      })
+    );
+
+    // apigw add resource
+    const resource = props.apigw.root.addResource("event");
+
+    // integrate apigw with sqs
+    resource.addMethod(
+      "POST",
+      new aws_apigateway.AwsIntegration({
+        service: "events",
+        path: "event",
+        options: {
+          credentialsRole: role,
+          passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+          requestParameters: {},
+          requestTemplates: {
+            "application/json": fs.readFileSync(
+              path.resolve(__dirname, "./../lambda/request-event-template"),
               { encoding: "utf-8" }
             ),
           },
