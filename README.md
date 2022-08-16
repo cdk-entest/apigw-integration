@@ -1,14 +1,39 @@
-# Welcome to your CDK TypeScript project
+## API Gateway Integration
 
-This is a blank project for CDK development with TypeScript.
+## Request Response Data Mapping
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+[HERE](https://docs.aws.amazon.com/apigateway/latest/developerguide/request-response-data-mappings.html)
 
-## Useful commands
+integrate apigw with sqs queue
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+```tsx
+resource.addMethod(
+  "POST",
+  new aws_apigateway.AwsIntegration({
+    service: "sqs",
+    path: queue.queueName,
+    options: {
+      credentialsRole: role,
+      requestParameters: {
+        "integration.request.header.Content-Type": `'application/x-www-form-urlencoded'`,
+      },
+      requestTemplates: {
+        "application/json": `Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")`,
+      },
+      integrationResponses: [
+        {
+          statusCode: "200",
+        },
+      ],
+    },
+  }),
+  // method response
+  {
+    methodResponses: [
+      {
+        statusCode: "200",
+      },
+    ],
+  }
+);
+```
