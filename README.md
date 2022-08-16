@@ -269,6 +269,79 @@ apigw needs to transform the request to match the request format of sqs [here](h
 Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")
 ```
 
+## SQS Integration
+
+role for apigw to put events to the default event bus
+
+```tsx
+role.addToPolicy(
+  new aws_iam.PolicyStatement({
+    effect: Effect.ALLOW,
+    resources: ["*"],
+    actions: ["events:PutEvents"],
+  })
+);
+```
+
+integrate the sqs queue with apigw. we need a request template to transform client requests into correct request format of [eventbridge](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutEvents.html)
+
+```tsx
+// apigw add resource
+const resource = apigw.root.addResource("event");
+
+// integrate apigw with sqs
+resource.addMethod(
+  "POST",
+  new aws_apigateway.AwsIntegration({
+    service: "events",
+    action: "PutEvents",
+    options: {
+      credentialsRole: role,
+      passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+      requestParameters: {},
+      requestTemplates: {
+        "application/json": fs.readFileSync(
+          path.resolve(__dirname, "./../lambda/request-event-template"),
+          { encoding: "utf-8" }
+        ),
+      },
+      integrationResponses: [
+        {
+          statusCode: "200",
+        },
+      ],
+    },
+  }),
+  // method response
+  {
+    methodResponses: [
+      {
+        statusCode: "200",
+      },
+    ],
+  }
+);
+```
+
+here is my lazy template
+
+```tsx
+#set($context.requestOverride.header.X-Amz-Target = "AWSEvents.PutEvents")
+#set($context.requestOverride.header.Content-Type = "application/x-amz-json-1.1")
+#set($inputRoot = $input.path('$'))
+{
+  "Entries": [
+    {
+      "Resources": ["1234"],
+      "Detail": "{ \"key1\": \"value1\", \"key2\": \"value2\" }",
+      "DetailType": "dev",
+      "EventBusName": "default",
+      "Source": "apigateway"
+    }
+  ]
+}
+```
+
 ## Conclusion
 
 1. Role for apigw
