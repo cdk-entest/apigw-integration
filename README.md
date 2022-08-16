@@ -8,17 +8,16 @@ date: 2022-08-11
 
 ## Introduction
 
-[GitHub](https://github.com/entest-hai/apigw-demo)
+[GitHub](https://github.com/entest-hai/lambda-integration) this shows how to integrate apigw with different aws services such as Lambda, Stepfunctions, and SQS. It also covers:
 
-- Integration targets: Lambda, Stepfunctions, SQS, etc
-- Deployment: multiple stages, deployment options
-- Monitor: access log and execution log
+- Integration targets: lambda, stepfunctions, and sqs
+- Deployment options: multiple stages, access log groups
 
-To integrate APIGW with targets, need to understand
+To integrate apigw with targets, we need:
 
-- Role for APIGW
-- Proxy mode
-- Setup: method request, [method response](https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-method-settings.html), [method options](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.MethodOptions.html), [integration options](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.LambdaIntegrationOptions.html)
+- Role for apigw
+- Request mapping: proxy, request parameters, request templates
+- Response mapping: method response, integration response, reponse template
 
 ## Lambda Backend
 
