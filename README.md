@@ -142,7 +142,7 @@ book.addMethod(
         statusCode: "200",
         responseTemplates: {
           "application/json": fs.readFileSync(
-            path.resolve(__dirname, "./../lambda/schema"),
+            path.resolve(__dirname, "./../lambda/response-template"),
             { encoding: "utf-8" }
           ),
         },
@@ -224,7 +224,7 @@ create an api resource
 const resource = props.apigw.root.addResource("queue");
 ```
 
-integrate apigw with the queue. apigw needs to transform the request to match the request format of sqs [here](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html) by using a request template (mapping), and add a header content-type parameter for POST method.
+integrate apigw with the queue.
 
 ```tsx
 // integrate apigw with sqs
@@ -261,6 +261,12 @@ resource.addMethod(
     ],
   }
 );
+```
+
+apigw needs to transform the request to match the request format of sqs [here](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html) by using a request template (mapping), and add a header content-type parameter for POST method. That's whey we need request-template here.
+
+```tsx
+Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")
 ```
 
 ## Conclusion
