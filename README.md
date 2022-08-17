@@ -351,6 +351,80 @@ here is my lazy template
 ```
 
 ## Stepfunction Integration
+role for apigw to invoke stepfunctions 
+```tsx
+role.addToPolicy(
+    new aws_iam.PolicyStatement({
+      effect: Effect.ALLOW,
+      resources: [stateMachine.stateMachineArn],
+      actions: ["states:StartExecution"],
+    })
+  );
+```
+
+create apigw with no default deployment in cdk 
+```tsx
+ const apigw = new aws_apigateway.RestApi(this, "ApiGw", {
+      restApiName: "ApiGwSetpfunction",
+      deploy: false,
+    });
+```
+
+stepfunction integration 
+```tsx
+apigw.root.addMethod(
+  "POST",
+  new aws_apigateway.AwsIntegration({
+    service: "states",
+    // exclusive path
+    action: "StartExecution",
+    options: {
+      credentialsRole: role,
+      passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+      requestParameters: {},
+      requestTemplates: {
+        "application/json": `#set($inputRoot = $input.path('$'))
+          {
+            "input": "$util.escapeJavaScript($input.json('$'))",
+            "stateMachineArn": "${stateMachine.stateMachineArn}"
+          }`,
+      },
+      integrationResponses: [
+        {
+          statusCode: "200",
+          // responseParameters: {},
+          // responseTemplates: {},
+          // selectionPattern: "",
+        },
+      ],
+    },
+  }),
+  {
+    methodResponses: [
+      {
+        statusCode: "200",
+      },
+    ],
+  }
+);
+```
+
+deployment and starge 
+```tsx
+// deployment
+const deployment = new aws_apigateway.Deployment(this, "deployment", {
+  api: apigw,
+});
+
+// dev stage
+new aws_apigateway.Stage(this, "DevStage", {
+  stageName: "dev",
+  deployment: deployment,
+  accessLogDestination: new aws_apigateway.LogGroupLogDestination(logGroup),
+  accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
+});
+```
+
 
 option 1. the post request body should be
 
