@@ -101,7 +101,10 @@ export class ApigwLambdaStack extends Stack {
             statusCode: "200",
             responseTemplates: {
               "application/json": fs.readFileSync(
-                path.resolve(__dirname, "./../lambda/response-template"),
+                path.resolve(
+                  __dirname,
+                  "./../template/response-template-lambda"
+                ),
                 { encoding: "utf-8" }
               ),
             },
@@ -195,7 +198,7 @@ export class ApigwSqsStack extends Stack {
           },
           requestTemplates: {
             "application/json": fs.readFileSync(
-              path.resolve(__dirname, "./../lambda/request-template"),
+              path.resolve(__dirname, "./../template/request-template-sqs"),
               { encoding: "utf-8" }
             ),
           },
@@ -295,7 +298,10 @@ export class ApigwEventStack extends Stack {
           requestParameters: {},
           requestTemplates: {
             "application/json": fs.readFileSync(
-              path.resolve(__dirname, "./../lambda/request-event-template"),
+              path.resolve(
+                __dirname,
+                "./../template/request-template-eventbridge"
+              ),
               { encoding: "utf-8" }
             ),
           },
@@ -336,6 +342,7 @@ export class ApiGwStepFunction extends Stack {
     // access log group
     const logGroup = new aws_logs.LogGroup(this, "LogGroup", {
       logGroupName: "ApiGwLogGroup",
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // role for apigw
