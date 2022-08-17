@@ -395,7 +395,7 @@ export class ApiGwStepFunction extends Stack {
             "application/json": `#set($inputRoot = $input.path('$'))
 {
   "input": "$util.escapeJavaScript($input.json('$'))",
-  "stateMachineArn": ${stateMachine.stateMachineArn}
+  "stateMachineArn": "${stateMachine.stateMachineArn}"
 }`,
           },
           integrationResponses: [
