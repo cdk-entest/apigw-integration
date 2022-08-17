@@ -61,7 +61,7 @@ def handler(event, context):
 
 ```
 
-## Role for APIGW
+## Role for ApiGw
 
 role for APIGW to invoke the lambda and put logs
 
@@ -96,7 +96,7 @@ role.addToPolicy(
 );
 ```
 
-## APIGW Prod Stage
+## ApiGw Prod Stage
 
 access log group for production stage
 
@@ -126,6 +126,32 @@ create api resource
 
 ```tsx
 const book = this.apigw.root.addResource("lambda");
+```
+
+## Development Stage
+
+access log group for development stage
+
+```tsx
+const devLogGroup = new aws_logs.LogGroup(this, "ApiAccessLogGroup", {
+  logGroupName: "DevLogGroupAccessLog",
+});
+```
+
+deployment stage
+
+```tsx
+const deployment = new aws_apigateway.Deployment(this, "Deployment", {
+  api: apiGw,
+});
+
+new aws_apigateway.Stage(this, "DevStage", {
+  stageName: "dev",
+  deployment,
+  dataTraceEnabled: true,
+  accessLogDestination: new aws_apigateway.LogGroupLogDestination(devLogGroup),
+  accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
+});
 ```
 
 ## Lambda Integration
@@ -177,32 +203,6 @@ then we want apigw to intercept the response from backend before return to clien
 }
 ```
 
-## Development Stage
-
-access log group for development stage
-
-```tsx
-const devLogGroup = new aws_logs.LogGroup(this, "ApiAccessLogGroup", {
-  logGroupName: "DevLogGroupAccessLog",
-});
-```
-
-deployment stage
-
-```tsx
-const deployment = new aws_apigateway.Deployment(this, "Deployment", {
-  api: apiGw,
-});
-
-new aws_apigateway.Stage(this, "DevStage", {
-  stageName: "dev",
-  deployment,
-  dataTraceEnabled: true,
-  accessLogDestination: new aws_apigateway.LogGroupLogDestination(devLogGroup),
-  accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
-});
-```
-
 ## SQS Integration
 
 create a qeuue
@@ -239,7 +239,8 @@ resource.addMethod(
   "POST",
   new aws_apigateway.AwsIntegration({
     service: "sqs",
-    path: queue.queueName,
+    // exclusive path
+    action: "StartExecution",
     options: {
       credentialsRole: role,
       passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
@@ -276,7 +277,7 @@ apigw needs to transform the request to match the request format of sqs [here](h
 Action=SendMessage&MessageBody=$util.urlEncode("$method.request.querystring.message")
 ```
 
-## SQS Integration
+## EventBridge Integration
 
 role for apigw to put events to the default event bus
 
@@ -346,6 +347,28 @@ here is my lazy template
       "Source": "apigateway"
     }
   ]
+}
+```
+
+## Stepfunction Integration
+
+option 1. the post request body should be
+
+```json
+{
+  "input": "{}",
+  "name": "MyExecution",
+  "stateMachineArn": "arn:aws:states:xxx"
+}
+```
+
+option 2. using request template
+
+```json
+#set($inputRoot = $input.path('$'))
+{
+  "input": "$util.escapeJavaScript($input.json('$'))",
+  "stateMachineArn": "arn:aws:states:xxx"
 }
 ```
 

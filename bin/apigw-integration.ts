@@ -5,6 +5,7 @@ import {
   ApigwEventStack,
   ApigwLambdaStack,
   ApigwSqsStack,
+  ApiGwStepFunction,
 } from "../lib/apigw-integration-stack";
 
 const app = new cdk.App();
@@ -17,3 +18,6 @@ const apiSqs = new ApigwSqsStack(app, "ApigwSqsIntegration", {});
 
 // apigw eventbridge integration
 const apiEvent = new ApigwEventStack(app, "ApigwEventIntegration", {});
+
+// apigw stepfunction integration
+const apiStepFunc = new ApiGwStepFunction(app, "ApigwStepFunction", {});

@@ -1,3 +1,6 @@
+// haimtran 13 AUG 2022
+// apigw with lambda, sqs, eventbridge, stepfunctions
+
 import {
   aws_apigateway,
   aws_events,
@@ -5,6 +8,7 @@ import {
   aws_lambda,
   aws_logs,
   aws_sqs,
+  aws_stepfunctions,
   RemovalPolicy,
   Stack,
   StackProps,
@@ -311,5 +315,112 @@ export class ApigwEventStack extends Stack {
         ],
       }
     );
+  }
+}
+
+export class ApiGwStepFunction extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    // simple stepfunctions
+    const startState = new aws_stepfunctions.Pass(this, "StartState");
+
+    const stateMachine = new aws_stepfunctions.StateMachine(
+      this,
+      "StateMachine",
+      {
+        definition: startState,
+      }
+    );
+
+    // access log group
+    const logGroup = new aws_logs.LogGroup(this, "LogGroup", {
+      logGroupName: "ApiGwLogGroup",
+    });
+
+    // role for apigw
+    const role = new aws_iam.Role(this, "ApiGwCallStepfunctionRole", {
+      roleName: "ApiGwCallStepFunctionRole",
+      assumedBy: new aws_iam.ServicePrincipal("apigateway.amazonaws.com"),
+    });
+
+    role.addToPolicy(
+      new aws_iam.PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: [stateMachine.stateMachineArn],
+        actions: ["states:StartExecution"],
+      })
+    );
+
+    role.addToPolicy(
+      new aws_iam.PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ["*"],
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents",
+        ],
+      })
+    );
+    // apigw
+    const apigw = new aws_apigateway.RestApi(this, "ApiGw", {
+      restApiName: "ApiGwSetpfunction",
+      deploy: false,
+    });
+
+    // stepfunctions integration
+    apigw.root.addMethod(
+      "POST",
+      new aws_apigateway.AwsIntegration({
+        service: "states",
+        // exclusive path
+        action: "StartExecution",
+        options: {
+          credentialsRole: role,
+          passthroughBehavior: PassthroughBehavior.WHEN_NO_TEMPLATES,
+          requestParameters: {},
+          requestTemplates: {
+            "application/json": `#set($inputRoot = $input.path('$'))
+{
+  "input": "$util.escapeJavaScript($input.json('$'))",
+  "stateMachineArn": ${stateMachine.stateMachineArn}
+}`,
+          },
+          integrationResponses: [
+            {
+              statusCode: "200",
+              // responseParameters: {},
+              // responseTemplates: {},
+              // selectionPattern: "",
+            },
+          ],
+        },
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: "200",
+          },
+        ],
+      }
+    );
+
+    // deployment
+    const deployment = new aws_apigateway.Deployment(this, "deployment", {
+      api: apigw,
+    });
+
+    // dev stage
+    new aws_apigateway.Stage(this, "DevStage", {
+      stageName: "dev",
+      deployment: deployment,
+      accessLogDestination: new aws_apigateway.LogGroupLogDestination(logGroup),
+      accessLogFormat: aws_apigateway.AccessLogFormat.jsonWithStandardFields(),
+    });
   }
 }
