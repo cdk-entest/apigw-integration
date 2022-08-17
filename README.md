@@ -371,6 +371,13 @@ option 2. using request template
   "stateMachineArn": "arn:aws:states:xxx"
 }
 ```
+then body request 
+```json
+{
+    "input": "{}",
+    "name": "execution-1",
+}
+```
 
 ## Conclusion
 
